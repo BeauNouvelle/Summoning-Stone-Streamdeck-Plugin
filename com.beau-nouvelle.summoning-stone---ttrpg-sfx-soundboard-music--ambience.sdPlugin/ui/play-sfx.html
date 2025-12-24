@@ -16,7 +16,10 @@
 
 <body>
 	<sdpi-item label="Sound Effect">
-		<sdpi-select id="sfx-select"></sdpi-select>
+		<sdpi-select id="sfx-select" disabled></sdpi-select>
+	</sdpi-item>
+	<sdpi-item>
+		<sdpi-button id="retry-button">Retry Connection</sdpi-button>
 	</sdpi-item>
 	<p class="status" id="status"></p>
 
@@ -25,6 +28,7 @@
 		const API_BASE_URL = "http://127.0.0.1:7123";
 		const sfxSelect = document.getElementById("sfx-select");
 		const statusEl = document.getElementById("status");
+		const retryButton = document.getElementById("retry-button");
 
 		let websocket = null;
 		let uuid = null;
@@ -33,6 +37,33 @@
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
+		}
+
+		function setSelectEnabled(enabled) {
+			sfxSelect.disabled = !enabled;
+		}
+
+		function setOptionsPlaceholder(label) {
+			sfxSelect.innerHTML = "";
+			const placeholder = document.createElement("option");
+			placeholder.value = "";
+			placeholder.textContent = label;
+			sfxSelect.appendChild(placeholder);
+		}
+
+		async function fetchJson(path) {
+			try {
+				const response = await fetch(`${API_BASE_URL}${path}`);
+				if (response.status === 401) {
+					throw new Error("Please sign in to Summoning Stone to load SFX.");
+				}
+				if (!response.ok) {
+					throw new Error(`Unexpected response (${response.status}).`);
+				}
+				return await response.json();
+			} catch (error) {
+				throw error;
+			}
 		}
 
 		function connectElgatoStreamDeck(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
@@ -74,24 +105,23 @@
 
 		async function loadSfx() {
 			setStatus("Loading SFX...");
+			setSelectEnabled(false);
+			setOptionsPlaceholder("Loading...");
 			try {
-				const response = await fetch(`${API_BASE_URL}/sfx`);
-				if (!response.ok) throw new Error(`HTTP ${response.status}`);
-				sfxList = await response.json();
+				sfxList = await fetchJson("/sfx");
 				populateOptions();
 				updateSelection();
 				setStatus("");
+				setSelectEnabled(true);
 			} catch (error) {
-				setStatus("Unable to load SFX. Is the Summoning Stone app running?");
+				const message = error?.message || "Unable to load SFX.";
+				setOptionsPlaceholder("Summoning Stone not connected");
+				setStatus(`${message} Open the Summoning Stone app to continue.`);
 			}
 		}
 
 		function populateOptions() {
-			sfxSelect.innerHTML = "";
-			const placeholder = document.createElement("option");
-			placeholder.value = "";
-			placeholder.textContent = "Select a sound effect";
-			sfxSelect.appendChild(placeholder);
+			setOptionsPlaceholder("Select a sound effect");
 
 			sfxList.forEach((item) => {
 				const option = document.createElement("option");
@@ -114,6 +144,13 @@
 			}
 			setSettings({ sfxName: selected.name, sfxTitle: selected.localizedName || selected.name });
 		});
+
+		retryButton.addEventListener("click", () => {
+			loadSfx();
+		});
+
+		setOptionsPlaceholder("Loading...");
+		setStatus("Waiting for Stream Deck...");
 	</script>
 </body>
 

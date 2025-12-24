@@ -16,10 +16,13 @@
 
 <body>
 	<sdpi-item label="Campaign">
-		<sdpi-select id="campaign-select"></sdpi-select>
+		<sdpi-select id="campaign-select" disabled></sdpi-select>
 	</sdpi-item>
 	<sdpi-item label="Scene">
-		<sdpi-select id="scene-select"></sdpi-select>
+		<sdpi-select id="scene-select" disabled></sdpi-select>
+	</sdpi-item>
+	<sdpi-item>
+		<sdpi-button id="retry-button">Retry Connection</sdpi-button>
 	</sdpi-item>
 	<p class="status" id="status"></p>
 
@@ -28,6 +31,7 @@
 		const campaignSelect = document.getElementById("campaign-select");
 		const sceneSelect = document.getElementById("scene-select");
 		const statusEl = document.getElementById("status");
+		const retryButton = document.getElementById("retry-button");
 
 		let websocket = null;
 		let uuid = null;
@@ -37,6 +41,38 @@
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
+		}
+
+		function setSelectsEnabled(enabled) {
+			campaignSelect.disabled = !enabled;
+			sceneSelect.disabled = !enabled;
+		}
+
+		function setCampaignPlaceholder(label) {
+			campaignSelect.innerHTML = "";
+			const placeholder = document.createElement("option");
+			placeholder.value = "";
+			placeholder.textContent = label;
+			campaignSelect.appendChild(placeholder);
+		}
+
+		function setScenePlaceholder(label) {
+			sceneSelect.innerHTML = "";
+			const placeholder = document.createElement("option");
+			placeholder.value = "";
+			placeholder.textContent = label;
+			sceneSelect.appendChild(placeholder);
+		}
+
+		async function fetchJson(path) {
+			const response = await fetch(`${API_BASE_URL}${path}`);
+			if (response.status === 401) {
+				throw new Error("Please sign in to Summoning Stone to load scenes.");
+			}
+			if (!response.ok) {
+				throw new Error(`Unexpected response (${response.status}).`);
+			}
+			return await response.json();
 		}
 
 		function connectElgatoStreamDeck(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
@@ -78,16 +114,21 @@
 
 		async function loadCampaigns() {
 			setStatus("Loading campaigns...");
+			setSelectsEnabled(false);
+			setCampaignPlaceholder("Loading...");
+			setScenePlaceholder("Select a scene");
 			try {
-				const response = await fetch(`${API_BASE_URL}/campaigns`);
-				if (!response.ok) throw new Error(`HTTP ${response.status}`);
-				campaigns = await response.json();
+				campaigns = await fetchJson("/campaigns");
 				populateCampaigns();
 				await loadScenes(settings.campaignId);
 				updateSelections();
 				setStatus("");
+				setSelectsEnabled(true);
 			} catch (error) {
-				setStatus("Unable to load campaigns. Is the Summoning Stone app running?");
+				const message = error?.message || "Unable to load campaigns.";
+				setCampaignPlaceholder("Summoning Stone not connected");
+				setScenePlaceholder("Select a scene");
+				setStatus(`${message} Open the Summoning Stone app to continue.`);
 			}
 		}
 
@@ -99,23 +140,18 @@
 			}
 			setStatus("Loading scenes...");
 			try {
-				const response = await fetch(`${API_BASE_URL}/campaigns/${encodeURIComponent(campaignId)}/scenes`);
-				if (!response.ok) throw new Error(`HTTP ${response.status}`);
-				scenes = await response.json();
+				scenes = await fetchJson(`/campaigns/${encodeURIComponent(campaignId)}/scenes`);
 				populateScenes();
 				setStatus("");
 			} catch (error) {
 				populateScenes();
-				setStatus("Unable to load scenes for this campaign.");
+				const message = error?.message || "Unable to load scenes for this campaign.";
+				setStatus(message);
 			}
 		}
 
 		function populateCampaigns() {
-			campaignSelect.innerHTML = "";
-			const placeholder = document.createElement("option");
-			placeholder.value = "";
-			placeholder.textContent = "Select a campaign";
-			campaignSelect.appendChild(placeholder);
+			setCampaignPlaceholder("Select a campaign");
 
 			campaigns.forEach((campaign) => {
 				const option = document.createElement("option");
@@ -126,11 +162,7 @@
 		}
 
 		function populateScenes() {
-			sceneSelect.innerHTML = "";
-			const placeholder = document.createElement("option");
-			placeholder.value = "";
-			placeholder.textContent = "Select a scene";
-			sceneSelect.appendChild(placeholder);
+			setScenePlaceholder("Select a scene");
 
 			scenes.forEach((scene) => {
 				const option = document.createElement("option");
@@ -168,6 +200,14 @@
 				sceneName: selected?.name,
 			});
 		});
+
+		retryButton.addEventListener("click", () => {
+			loadCampaigns();
+		});
+
+		setCampaignPlaceholder("Loading...");
+		setScenePlaceholder("Loading...");
+		setStatus("Waiting for Stream Deck...");
 	</script>
 </body>
 
