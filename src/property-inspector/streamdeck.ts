@@ -28,6 +28,7 @@ let webSocket: WebSocket | null = null;
 let context: string | null = null;
 let cachedSettings: Record<string, unknown> = {};
 let resolveSettings: ((settings: Record<string, unknown>) => void) | null = null;
+let settingsResolved = false;
 let settingsReady = new Promise<Record<string, unknown>>((resolve) => {
 	resolveSettings = resolve;
 });
@@ -69,13 +70,17 @@ function setCachedSettings(nextSettings: Record<string, unknown>) {
 	if (resolveSettings) {
 		resolveSettings(cachedSettings);
 		resolveSettings = null;
+		settingsResolved = true;
 	}
 }
 
-function resetSettingsPromise() {
-	settingsReady = new Promise<Record<string, unknown>>((resolve) => {
-		resolveSettings = resolve;
-	});
+function ensureSettingsPromise() {
+	if (settingsResolved) {
+		settingsResolved = false;
+		settingsReady = new Promise<Record<string, unknown>>((resolve) => {
+			resolveSettings = resolve;
+		});
+	}
 }
 
 function sendMessage(message: Record<string, unknown>) {
@@ -90,10 +95,10 @@ function connectElgatoStreamDeck(
 	uuid: string,
 	registerEvent: string,
 	_: unknown,
-	actionInfo: StreamDeckConnectionInfo | string,
+	actionInfo?: StreamDeckConnectionInfo | string,
 ) {
 	debugLog("Connecting property inspector...");
-	resetSettingsPromise();
+	ensureSettingsPromise();
 	const parsedInfo = parseJson<StreamDeckConnectionInfo>(actionInfo ?? {});
 	context = parsedInfo?.context ?? uuid;
 	setCachedSettings(parsedInfo?.payload?.settings ?? {});
@@ -124,6 +129,30 @@ declare global {
 
 if (typeof window !== "undefined") {
 	window.connectElgatoStreamDeck = connectElgatoStreamDeck;
+
+	const params = new URLSearchParams(window.location.search);
+	const port = params.get("port");
+	const uuid = params.get("uuid");
+	const registerEvent = params.get("registerEvent");
+	const info = params.get("info");
+	const actionInfo = params.get("actionInfo");
+	if (port && uuid && registerEvent) {
+		let parsedInfo: unknown;
+		let parsedActionInfo: StreamDeckConnectionInfo | string | undefined;
+		try {
+			parsedInfo = info ? parseJson(info) : undefined;
+			parsedActionInfo = actionInfo ? parseJson<StreamDeckConnectionInfo | string>(actionInfo) : undefined;
+		} catch (error) {
+			debugLog("Failed to parse connection payload", String(error));
+		}
+		connectElgatoStreamDeck(
+			port,
+			uuid,
+			registerEvent,
+			parsedInfo,
+			parsedActionInfo,
+		);
+	}
 }
 
 const streamDeck: StreamDeckApi<Record<string, unknown>> = {
@@ -133,6 +162,9 @@ const streamDeck: StreamDeckApi<Record<string, unknown>> = {
 				sendMessage({ event: "getSettings", context });
 			}
 			debugLog("Requested settings from Stream Deck.");
+			if (settingsResolved) {
+				return Promise.resolve(cachedSettings);
+			}
 			return settingsReady;
 		},
 		setSettings(settings: Record<string, unknown>) {
