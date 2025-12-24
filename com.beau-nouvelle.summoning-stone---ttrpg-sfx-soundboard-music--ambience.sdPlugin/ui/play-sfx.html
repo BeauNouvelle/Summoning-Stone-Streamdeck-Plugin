@@ -32,6 +32,7 @@
 
 		let websocket = null;
 		let uuid = null;
+		let actionContext = null;
 		let settings = {};
 		let sfxList = [];
 		let retryTimer = null;
@@ -89,6 +90,7 @@
 			if (inActionInfo) {
 				try {
 					const payload = JSON.parse(inActionInfo);
+					actionContext = payload?.context || null;
 					settings = payload?.payload?.settings || {};
 				} catch (error) {
 					settings = {};
@@ -112,13 +114,15 @@
 
 		function requestSettings() {
 			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
-			websocket.send(JSON.stringify({ event: "getSettings", context: uuid }));
+			const context = actionContext || uuid;
+			websocket.send(JSON.stringify({ event: "getSettings", context }));
 		}
 
 		function setSettings(patch) {
 			settings = { ...settings, ...patch };
 			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
-			websocket.send(JSON.stringify({ event: "setSettings", context: uuid, payload: settings }));
+			const context = actionContext || uuid;
+			websocket.send(JSON.stringify({ event: "setSettings", context, payload: settings }));
 		}
 
 		async function loadSfx() {
