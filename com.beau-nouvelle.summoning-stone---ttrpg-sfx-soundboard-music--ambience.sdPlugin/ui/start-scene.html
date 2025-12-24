@@ -45,6 +45,7 @@
 		let isLoadingCampaigns = false;
 		let hasLoadedCampaigns = false;
 		let loadedCampaignId = "";
+		let isApplyingSettings = false;
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
@@ -220,17 +221,22 @@
 
 		async function updateSelections() {
 			if (campaigns.length) {
+				isApplyingSettings = true;
 				campaignSelect.value = settings.campaignId || "";
+				isApplyingSettings = false;
 			}
 			if (settings.campaignId && loadedCampaignId !== settings.campaignId && !isLoadingCampaigns) {
 				await loadScenes(settings.campaignId);
 			}
 			if (scenes.length) {
+				isApplyingSettings = true;
 				sceneSelect.value = settings.sceneId || "";
+				isApplyingSettings = false;
 			}
 		}
 
 		async function handleCampaignChange() {
+			if (isApplyingSettings || !campaigns.length) return;
 			const currentValue = campaignSelect.value;
 			if (currentValue === lastCampaignValue) return;
 			lastCampaignValue = currentValue;
@@ -250,6 +256,7 @@
 		campaignSelect.addEventListener("valuechange", handleCampaignChange);
 
 		function handleSceneChange() {
+			if (isApplyingSettings || !scenes.length) return;
 			const currentValue = sceneSelect.value;
 			if (currentValue === lastSceneValue) return;
 			lastSceneValue = currentValue;

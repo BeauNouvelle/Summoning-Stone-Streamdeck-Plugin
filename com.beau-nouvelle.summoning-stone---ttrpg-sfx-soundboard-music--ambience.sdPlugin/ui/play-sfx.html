@@ -38,6 +38,7 @@
 		let retryTimer = null;
 		let isLoadingSfx = false;
 		let hasLoadedSfx = false;
+		let isApplyingSettings = false;
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
@@ -162,10 +163,13 @@
 
 		function updateSelection() {
 			if (!sfxList.length) return;
+			isApplyingSettings = true;
 			sfxSelect.value = settings.sfxName || "";
+			isApplyingSettings = false;
 		}
 
 		function handleSelectionChange() {
+			if (isApplyingSettings || !sfxList.length) return;
 			const selected = sfxList.find((item) => item.name === sfxSelect.value);
 			if (!selected) {
 				setSettings({ sfxName: undefined, sfxTitle: undefined });
