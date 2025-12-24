@@ -38,9 +38,25 @@
 		let settings = {};
 		let campaigns = [];
 		let scenes = [];
+		let retryTimer = null;
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
+		}
+
+		function scheduleRetry() {
+			if (retryTimer) return;
+			retryTimer = window.setTimeout(() => {
+				retryTimer = null;
+				loadCampaigns();
+			}, 5000);
+		}
+
+		function clearRetry() {
+			if (retryTimer) {
+				window.clearTimeout(retryTimer);
+				retryTimer = null;
+			}
 		}
 
 		function setSelectsEnabled(enabled) {
@@ -113,6 +129,7 @@
 		}
 
 		async function loadCampaigns() {
+			clearRetry();
 			setStatus("Loading campaigns...");
 			setSelectsEnabled(false);
 			setCampaignPlaceholder("Loading...");
@@ -128,7 +145,8 @@
 				const message = error?.message || "Unable to load campaigns.";
 				setCampaignPlaceholder("Summoning Stone not connected");
 				setScenePlaceholder("Select a scene");
-				setStatus(`${message} Open the Summoning Stone app to continue.`);
+				setStatus(`${message} Open the Summoning Stone app to continue. Retrying...`);
+				scheduleRetry();
 			}
 		}
 
@@ -181,7 +199,7 @@
 			}
 		}
 
-		campaignSelect.addEventListener("change", async () => {
+		async function handleCampaignChange() {
 			const selected = campaigns.find((campaign) => campaign.id === campaignSelect.value);
 			setSettings({
 				campaignId: selected?.id,
@@ -191,15 +209,21 @@
 			});
 			await loadScenes(selected?.id);
 			sceneSelect.value = "";
-		});
+		}
 
-		sceneSelect.addEventListener("change", () => {
+		campaignSelect.addEventListener("change", handleCampaignChange);
+		campaignSelect.addEventListener("input", handleCampaignChange);
+
+		function handleSceneChange() {
 			const selected = scenes.find((scene) => scene.id === sceneSelect.value);
 			setSettings({
 				sceneId: selected?.id,
 				sceneName: selected?.name,
 			});
-		});
+		}
+
+		sceneSelect.addEventListener("change", handleSceneChange);
+		sceneSelect.addEventListener("input", handleSceneChange);
 
 		retryButton.addEventListener("click", () => {
 			loadCampaigns();
