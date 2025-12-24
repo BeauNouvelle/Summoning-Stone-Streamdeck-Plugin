@@ -18,10 +18,11 @@ export type SfxResponse = {
 
 let cachedSfx: { fetchedAt: number; items: SfxResponse[] } | null = null;
 const SFX_CACHE_TTL_MS = 30_000;
+const IMAGE_TIMEOUT_MS = 3000;
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 3000);
+	const timeoutId = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
 	try {
 		const response = await fetch(`${API_BASE_URL}${path}`, {
 			...init,
@@ -46,6 +47,22 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
 	}
 }
 
+async function fetchImageAsDataUrl(url: string): Promise<string> {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
+	try {
+		const response = await fetch(url, { signal: controller.signal });
+		if (!response.ok) {
+			const message = await response.text().catch(() => response.statusText);
+			throw { status: response.status, message } satisfies ApiError;
+		}
+		const buffer = Buffer.from(await response.arrayBuffer());
+		return `data:image/png;base64,${buffer.toString("base64")}`;
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}
+
 export async function fetchSfxList(): Promise<SfxResponse[]> {
 	if (cachedSfx && Date.now() - cachedSfx.fetchedAt < SFX_CACHE_TTL_MS) {
 		return cachedSfx.items;
@@ -61,6 +78,26 @@ export async function fetchSfxIcon(name: string): Promise<string> {
 	const response = await apiFetch(`/sfx/${encodeURIComponent(name)}/icon`);
 	const buffer = Buffer.from(await response.arrayBuffer());
 	return `data:image/png;base64,${buffer.toString("base64")}`;
+}
+
+export async function resolveSfxIcon(icon: string): Promise<string> {
+	if (icon.startsWith("data:")) {
+		return icon;
+	}
+
+	if (icon.startsWith("http://") || icon.startsWith("https://")) {
+		return fetchImageAsDataUrl(icon);
+	}
+
+	if (icon.startsWith("/")) {
+		return fetchImageAsDataUrl(`${API_BASE_URL}${icon}`);
+	}
+
+	if (/^[A-Za-z0-9+/=]+$/.test(icon)) {
+		return `data:image/png;base64,${icon}`;
+	}
+
+	return icon;
 }
 
 export async function playSfx(name: string): Promise<void> {

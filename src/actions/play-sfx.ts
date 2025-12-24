@@ -1,6 +1,6 @@
 import streamDeck, { action, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
 
-import { fetchSfxIcon, fetchSfxList, playSfx } from "../api";
+import { fetchSfxIcon, fetchSfxList, playSfx, resolveSfxIcon } from "../api";
 
 type SfxSettings = {
 	sfxName?: string;
@@ -53,6 +53,14 @@ export class PlaySfx extends SingletonAction<SfxSettings> {
 
 	private async setSfxImage(ev: WillAppearEvent<SfxSettings>, sfxName: string): Promise<void> {
 		try {
+			const sfxList = await fetchSfxList();
+			const entry = sfxList.find((item) => item.name === sfxName);
+			if (entry?.icon) {
+				const image = await resolveSfxIcon(entry.icon);
+				await ev.action.setImage(image);
+				return;
+			}
+
 			const image = await fetchSfxIcon(sfxName);
 			await ev.action.setImage(image);
 		} catch (error) {

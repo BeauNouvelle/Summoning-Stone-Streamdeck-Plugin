@@ -35,6 +35,8 @@
 		let settings = {};
 		let sfxList = [];
 		let retryTimer = null;
+		let isLoadingSfx = false;
+		let hasLoadedSfx = false;
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
@@ -120,6 +122,8 @@
 		}
 
 		async function loadSfx() {
+			if (isLoadingSfx) return;
+			isLoadingSfx = true;
 			clearRetry();
 			setStatus("Loading SFX...");
 			setSelectEnabled(false);
@@ -130,11 +134,14 @@
 				updateSelection();
 				setStatus("");
 				setSelectEnabled(true);
+				hasLoadedSfx = true;
 			} catch (error) {
 				const message = error?.message || "Unable to load SFX.";
 				setOptionsPlaceholder("Summoning Stone not connected");
 				setStatus(`${message} Open the Summoning Stone app to continue. Retrying...`);
 				scheduleRetry();
+			} finally {
+				isLoadingSfx = false;
 			}
 		}
 
@@ -165,9 +172,23 @@
 
 		sfxSelect.addEventListener("change", handleSelectionChange);
 		sfxSelect.addEventListener("input", handleSelectionChange);
+		sfxSelect.addEventListener("valuechange", handleSelectionChange);
 
 		retryButton.addEventListener("click", () => {
 			loadSfx();
+		});
+
+		function ensureSfxLoaded() {
+			if (hasLoadedSfx || isLoadingSfx) return;
+			loadSfx();
+		}
+
+		window.connectElgatoStreamDeck = connectElgatoStreamDeck;
+		window.addEventListener("load", ensureSfxLoaded);
+		document.addEventListener("visibilitychange", () => {
+			if (!document.hidden) {
+				ensureSfxLoaded();
+			}
 		});
 
 		setOptionsPlaceholder("Loading...");

@@ -43,6 +43,7 @@
 		let lastSceneValue = "";
 		let isLoadingCampaigns = false;
 		let hasLoadedCampaigns = false;
+		let loadedCampaignId = "";
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
@@ -127,7 +128,7 @@
 				const message = JSON.parse(event.data);
 				if (message.event === "didReceiveSettings") {
 					settings = message.payload.settings || {};
-					updateSelections();
+					void updateSelections();
 				}
 			};
 		}
@@ -155,7 +156,7 @@
 				campaigns = await fetchJson("/campaigns");
 				populateCampaigns();
 				await loadScenes(settings.campaignId);
-				updateSelections();
+				await updateSelections();
 				setStatus("");
 				setSelectsEnabled(true);
 				hasLoadedCampaigns = true;
@@ -173,6 +174,7 @@
 		async function loadScenes(campaignId) {
 			scenes = [];
 			if (!campaignId) {
+				loadedCampaignId = "";
 				populateScenes();
 				return;
 			}
@@ -180,9 +182,11 @@
 			try {
 				scenes = await fetchJson(`/campaigns/${encodeURIComponent(campaignId)}/scenes`);
 				populateScenes();
+				loadedCampaignId = campaignId;
 				setStatus("");
 			} catch (error) {
 				populateScenes();
+				loadedCampaignId = "";
 				const message = error?.message || "Unable to load scenes for this campaign.";
 				setStatus(message);
 			}
@@ -210,9 +214,12 @@
 			});
 		}
 
-		function updateSelections() {
+		async function updateSelections() {
 			if (campaigns.length) {
 				campaignSelect.value = settings.campaignId || "";
+			}
+			if (settings.campaignId && loadedCampaignId !== settings.campaignId && !isLoadingCampaigns) {
+				await loadScenes(settings.campaignId);
 			}
 			if (scenes.length) {
 				sceneSelect.value = settings.sceneId || "";
@@ -268,6 +275,8 @@
 				ensureCampaignsLoaded();
 			}
 		});
+
+		window.connectElgatoStreamDeck = connectElgatoStreamDeck;
 
 		setCampaignPlaceholder("Loading...");
 		setScenePlaceholder("Loading...");
