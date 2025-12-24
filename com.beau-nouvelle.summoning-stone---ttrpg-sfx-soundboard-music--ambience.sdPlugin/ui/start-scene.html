@@ -41,6 +41,8 @@
 		let retryTimer = null;
 		let lastCampaignValue = "";
 		let lastSceneValue = "";
+		let isLoadingCampaigns = false;
+		let hasLoadedCampaigns = false;
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
@@ -142,6 +144,8 @@
 		}
 
 		async function loadCampaigns() {
+			if (isLoadingCampaigns) return;
+			isLoadingCampaigns = true;
 			clearRetry();
 			setStatus("Loading campaigns...");
 			setSelectsEnabled(false);
@@ -154,12 +158,15 @@
 				updateSelections();
 				setStatus("");
 				setSelectsEnabled(true);
+				hasLoadedCampaigns = true;
 			} catch (error) {
 				const message = error?.message || "Unable to load campaigns.";
 				setCampaignPlaceholder("Summoning Stone not connected");
 				setScenePlaceholder("Select a scene");
 				setStatus(`${message} Open the Summoning Stone app to continue. Retrying...`);
 				scheduleRetry();
+			} finally {
+				isLoadingCampaigns = false;
 			}
 		}
 
@@ -248,6 +255,18 @@
 
 		retryButton.addEventListener("click", () => {
 			loadCampaigns();
+		});
+
+		function ensureCampaignsLoaded() {
+			if (hasLoadedCampaigns || isLoadingCampaigns) return;
+			loadCampaigns();
+		}
+
+		window.addEventListener("load", ensureCampaignsLoaded);
+		document.addEventListener("visibilitychange", () => {
+			if (!document.hidden) {
+				ensureCampaignsLoaded();
+			}
 		});
 
 		setCampaignPlaceholder("Loading...");

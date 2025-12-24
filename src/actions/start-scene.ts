@@ -26,7 +26,8 @@ export class StartScene extends SingletonAction<SceneSettings> {
 		try {
 			await startScene(campaignId, sceneId);
 		} catch (error) {
-			streamDeck.logger.error(`Failed to start scene ${sceneId}: ${String(error)}`);
+			const message = error && typeof error === "object" && "message" in error ? String(error.message) : String(error);
+			streamDeck.logger.error(`Failed to start scene ${sceneId}: ${message}`);
 			await ev.action.showAlert();
 		}
 	}

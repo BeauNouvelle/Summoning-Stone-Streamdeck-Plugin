@@ -20,13 +20,30 @@ let cachedSfx: { fetchedAt: number; items: SfxResponse[] } | null = null;
 const SFX_CACHE_TTL_MS = 30_000;
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-	const response = await fetch(`${API_BASE_URL}${path}`, init);
-	if (!response.ok) {
-		const message = await response.text().catch(() => response.statusText);
-		const error: ApiError = { status: response.status, message };
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), 3000);
+	try {
+		const response = await fetch(`${API_BASE_URL}${path}`, {
+			...init,
+			signal: controller.signal,
+		});
+		if (!response.ok) {
+			const message = await response.text().catch(() => response.statusText);
+			const error: ApiError = { status: response.status, message };
+			throw error;
+		}
+		return response;
+	} catch (error) {
+		if (error instanceof Error && error.name === "AbortError") {
+			throw { status: 0, message: "Request timed out. Is Summoning Stone open?" } satisfies ApiError;
+		}
+		if (error instanceof Error) {
+			throw { status: 0, message: error.message } satisfies ApiError;
+		}
 		throw error;
+	} finally {
+		clearTimeout(timeoutId);
 	}
-	return response;
 }
 
 export async function fetchSfxList(): Promise<SfxResponse[]> {
