@@ -39,6 +39,8 @@
 		let campaigns = [];
 		let scenes = [];
 		let retryTimer = null;
+		let lastCampaignValue = "";
+		let lastSceneValue = "";
 
 		function setStatus(message) {
 			statusEl.textContent = message || "";
@@ -81,14 +83,25 @@
 		}
 
 		async function fetchJson(path) {
-			const response = await fetch(`${API_BASE_URL}${path}`);
-			if (response.status === 401) {
-				throw new Error("Please sign in to Summoning Stone to load scenes.");
+			const controller = new AbortController();
+			const timeoutId = window.setTimeout(() => controller.abort(), 3000);
+			try {
+				const response = await fetch(`${API_BASE_URL}${path}`, { signal: controller.signal });
+				if (response.status === 401) {
+					throw new Error("Please sign in to Summoning Stone to load scenes.");
+				}
+				if (!response.ok) {
+					throw new Error(`Unexpected response (${response.status}).`);
+				}
+				return await response.json();
+			} catch (error) {
+				if (error?.name === "AbortError") {
+					throw new Error("Request timed out. Is Summoning Stone open?");
+				}
+				throw error;
+			} finally {
+				window.clearTimeout(timeoutId);
 			}
-			if (!response.ok) {
-				throw new Error(`Unexpected response (${response.status}).`);
-			}
-			return await response.json();
 		}
 
 		function connectElgatoStreamDeck(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
@@ -200,7 +213,10 @@
 		}
 
 		async function handleCampaignChange() {
-			const selected = campaigns.find((campaign) => campaign.id === campaignSelect.value);
+			const currentValue = campaignSelect.value;
+			if (currentValue === lastCampaignValue) return;
+			lastCampaignValue = currentValue;
+			const selected = campaigns.find((campaign) => campaign.id === currentValue);
 			setSettings({
 				campaignId: selected?.id,
 				campaignName: selected?.name,
@@ -213,9 +229,13 @@
 
 		campaignSelect.addEventListener("change", handleCampaignChange);
 		campaignSelect.addEventListener("input", handleCampaignChange);
+		campaignSelect.addEventListener("valuechange", handleCampaignChange);
 
 		function handleSceneChange() {
-			const selected = scenes.find((scene) => scene.id === sceneSelect.value);
+			const currentValue = sceneSelect.value;
+			if (currentValue === lastSceneValue) return;
+			lastSceneValue = currentValue;
+			const selected = scenes.find((scene) => scene.id === currentValue);
 			setSettings({
 				sceneId: selected?.id,
 				sceneName: selected?.name,
@@ -224,6 +244,7 @@
 
 		sceneSelect.addEventListener("change", handleSceneChange);
 		sceneSelect.addEventListener("input", handleSceneChange);
+		sceneSelect.addEventListener("valuechange", handleSceneChange);
 
 		retryButton.addEventListener("click", () => {
 			loadCampaigns();
