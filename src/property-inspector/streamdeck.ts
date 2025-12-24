@@ -28,9 +28,18 @@ let webSocket: WebSocket | null = null;
 let context: string | null = null;
 let cachedSettings: Record<string, unknown> = {};
 let resolveSettings: ((settings: Record<string, unknown>) => void) | null = null;
-const settingsReady = new Promise<Record<string, unknown>>((resolve) => {
+let settingsReady = new Promise<Record<string, unknown>>((resolve) => {
 	resolveSettings = resolve;
 });
+
+const logPrefix = "[Summoning Stone PI]";
+function debugLog(message: string, data?: unknown) {
+	if (data === undefined) {
+		console.log(`${logPrefix} ${message}`);
+	} else {
+		console.log(`${logPrefix} ${message}`, data);
+	}
+}
 
 function parseJson<T>(value: T | string): T {
 	if (typeof value === "string") {
@@ -54,6 +63,12 @@ function setCachedSettings(nextSettings: Record<string, unknown>) {
 	}
 }
 
+function resetSettingsPromise() {
+	settingsReady = new Promise<Record<string, unknown>>((resolve) => {
+		resolveSettings = resolve;
+	});
+}
+
 function sendMessage(message: Record<string, unknown>) {
 	if (!webSocket || webSocket.readyState !== WebSocket.OPEN) {
 		return;
@@ -68,13 +83,18 @@ function connectElgatoStreamDeck(
 	_: unknown,
 	actionInfo: StreamDeckConnectionInfo | string,
 ) {
+	debugLog("Connecting property inspector...");
+	resetSettingsPromise();
 	const parsedInfo = parseJson<StreamDeckConnectionInfo>(actionInfo ?? {});
 	context = parsedInfo?.context ?? uuid;
 	setCachedSettings(parsedInfo?.payload?.settings ?? {});
+	emitSettings(cachedSettings);
+	debugLog("Initial settings received from Stream Deck", cachedSettings);
 
 	webSocket = new WebSocket(`ws://127.0.0.1:${port}`);
 	webSocket.onopen = () => {
 		sendMessage({ event: registerEvent, uuid });
+		debugLog("WebSocket connected.");
 	};
 	webSocket.onmessage = (event) => {
 		const message = parseJson<Record<string, unknown>>(event.data as string);
@@ -82,6 +102,7 @@ function connectElgatoStreamDeck(
 			const payload = message.payload as { settings?: Record<string, unknown> };
 			setCachedSettings(payload.settings ?? {});
 			emitSettings(cachedSettings);
+			debugLog("Settings updated from Stream Deck", cachedSettings);
 		}
 	};
 }
@@ -102,6 +123,7 @@ const streamDeck: StreamDeckApi<Record<string, unknown>> = {
 			if (context) {
 				sendMessage({ event: "getSettings", context });
 			}
+			debugLog("Requested settings from Stream Deck.");
 			return settingsReady;
 		},
 		setSettings(settings: Record<string, unknown>) {
@@ -109,6 +131,7 @@ const streamDeck: StreamDeckApi<Record<string, unknown>> = {
 			const nextSettings = { ...cachedSettings, ...settings };
 			setCachedSettings(nextSettings);
 			sendMessage({ event: "setSettings", context, payload: nextSettings });
+			debugLog("Sent settings to Stream Deck", nextSettings);
 		},
 	},
 	onDidReceiveSettings(handler) {
