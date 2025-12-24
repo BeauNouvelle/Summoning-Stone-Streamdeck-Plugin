@@ -89,7 +89,7 @@
 			uuid = inUUID;
 			if (inActionInfo) {
 				try {
-					const payload = JSON.parse(inActionInfo);
+					const payload = typeof inActionInfo === "string" ? JSON.parse(inActionInfo) : inActionInfo;
 					actionContext = payload?.context || null;
 					settings = payload?.payload?.settings || {};
 				} catch (error) {
