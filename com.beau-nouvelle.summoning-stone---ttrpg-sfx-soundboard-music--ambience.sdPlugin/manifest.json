@@ -4,11 +4,42 @@
 	"Author": "Beau Nouvelle",
 	"Actions": [
 		{
-			"Name": "Counter",
-			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.increment",
+			"Name": "Play SFX",
+			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.sfx.play",
 			"Icon": "imgs/actions/counter/icon",
-			"Tooltip": "Displays a count, which increments by one on press.",
-			"PropertyInspectorPath": "ui/increment-counter.html",
+			"Tooltip": "Play a Summoning Stone sound effect.",
+			"PropertyInspectorPath": "ui/play-sfx.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Start Scene",
+			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.scene.start",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Start a Summoning Stone scene.",
+			"PropertyInspectorPath": "ui/start-scene.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
+		},
+		{
+			"Name": "Stop Scene",
+			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.scene.stop",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Stop the active Summoning Stone scene.",
 			"Controllers": [
 				"Keypad"
 			],

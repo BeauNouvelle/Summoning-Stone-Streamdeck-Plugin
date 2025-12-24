@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+	<title>Play SFX Settings</title>
+	<meta charset="utf-8" />
+	<script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+	<style>
+		.status {
+			color: #cccccc;
+			font-size: 12px;
+			margin: 8px 0 0 0;
+		}
+	</style>
+</head>
+
+<body>
+	<sdpi-item label="Sound Effect">
+		<sdpi-select id="sfx-select"></sdpi-select>
+	</sdpi-item>
+	<p class="status" id="status"></p>
+
+	<script>
+		/* global SDPIComponents */
+		const API_BASE_URL = "http://127.0.0.1:7123";
+		const sfxSelect = document.getElementById("sfx-select");
+		const statusEl = document.getElementById("status");
+
+		let websocket = null;
+		let uuid = null;
+		let settings = {};
+		let sfxList = [];
+
+		function setStatus(message) {
+			statusEl.textContent = message || "";
+		}
+
+		function connectElgatoStreamDeck(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+			uuid = inUUID;
+			if (inActionInfo) {
+				try {
+					const payload = JSON.parse(inActionInfo);
+					settings = payload?.payload?.settings || {};
+				} catch (error) {
+					settings = {};
+				}
+			}
+
+			websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
+			websocket.onopen = () => {
+				websocket.send(JSON.stringify({ event: inRegisterEvent, uuid }));
+				requestSettings();
+				loadSfx();
+			};
+			websocket.onmessage = (event) => {
+				const message = JSON.parse(event.data);
+				if (message.event === "didReceiveSettings") {
+					settings = message.payload.settings || {};
+					updateSelection();
+				}
+			};
+		}
+
+		function requestSettings() {
+			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+			websocket.send(JSON.stringify({ event: "getSettings", context: uuid }));
+		}
+
+		function setSettings(patch) {
+			settings = { ...settings, ...patch };
+			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+			websocket.send(JSON.stringify({ event: "setSettings", context: uuid, payload: settings }));
+		}
+
+		async function loadSfx() {
+			setStatus("Loading SFX...");
+			try {
+				const response = await fetch(`${API_BASE_URL}/sfx`);
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+				sfxList = await response.json();
+				populateOptions();
+				updateSelection();
+				setStatus("");
+			} catch (error) {
+				setStatus("Unable to load SFX. Is the Summoning Stone app running?");
+			}
+		}
+
+		function populateOptions() {
+			sfxSelect.innerHTML = "";
+			const placeholder = document.createElement("option");
+			placeholder.value = "";
+			placeholder.textContent = "Select a sound effect";
+			sfxSelect.appendChild(placeholder);
+
+			sfxList.forEach((item) => {
+				const option = document.createElement("option");
+				option.value = item.name;
+				option.textContent = item.localizedName || item.name;
+				sfxSelect.appendChild(option);
+			});
+		}
+
+		function updateSelection() {
+			if (!sfxList.length) return;
+			sfxSelect.value = settings.sfxName || "";
+		}
+
+		sfxSelect.addEventListener("change", () => {
+			const selected = sfxList.find((item) => item.name === sfxSelect.value);
+			if (!selected) {
+				setSettings({ sfxName: undefined, sfxTitle: undefined });
+				return;
+			}
+			setSettings({ sfxName: selected.name, sfxTitle: selected.localizedName || selected.name });
+		});
+	</script>
+</body>
+
+</html>

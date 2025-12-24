@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+	<title>Start Scene Settings</title>
+	<meta charset="utf-8" />
+	<script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+	<style>
+		.status {
+			color: #cccccc;
+			font-size: 12px;
+			margin: 8px 0 0 0;
+		}
+	</style>
+</head>
+
+<body>
+	<sdpi-item label="Campaign">
+		<sdpi-select id="campaign-select"></sdpi-select>
+	</sdpi-item>
+	<sdpi-item label="Scene">
+		<sdpi-select id="scene-select"></sdpi-select>
+	</sdpi-item>
+	<p class="status" id="status"></p>
+
+	<script>
+		const API_BASE_URL = "http://127.0.0.1:7123";
+		const campaignSelect = document.getElementById("campaign-select");
+		const sceneSelect = document.getElementById("scene-select");
+		const statusEl = document.getElementById("status");
+
+		let websocket = null;
+		let uuid = null;
+		let settings = {};
+		let campaigns = [];
+		let scenes = [];
+
+		function setStatus(message) {
+			statusEl.textContent = message || "";
+		}
+
+		function connectElgatoStreamDeck(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+			uuid = inUUID;
+			if (inActionInfo) {
+				try {
+					const payload = JSON.parse(inActionInfo);
+					settings = payload?.payload?.settings || {};
+				} catch (error) {
+					settings = {};
+				}
+			}
+
+			websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
+			websocket.onopen = () => {
+				websocket.send(JSON.stringify({ event: inRegisterEvent, uuid }));
+				requestSettings();
+				loadCampaigns();
+			};
+			websocket.onmessage = (event) => {
+				const message = JSON.parse(event.data);
+				if (message.event === "didReceiveSettings") {
+					settings = message.payload.settings || {};
+					updateSelections();
+				}
+			};
+		}
+
+		function requestSettings() {
+			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+			websocket.send(JSON.stringify({ event: "getSettings", context: uuid }));
+		}
+
+		function setSettings(patch) {
+			settings = { ...settings, ...patch };
+			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+			websocket.send(JSON.stringify({ event: "setSettings", context: uuid, payload: settings }));
+		}
+
+		async function loadCampaigns() {
+			setStatus("Loading campaigns...");
+			try {
+				const response = await fetch(`${API_BASE_URL}/campaigns`);
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+				campaigns = await response.json();
+				populateCampaigns();
+				await loadScenes(settings.campaignId);
+				updateSelections();
+				setStatus("");
+			} catch (error) {
+				setStatus("Unable to load campaigns. Is the Summoning Stone app running?");
+			}
+		}
+
+		async function loadScenes(campaignId) {
+			scenes = [];
+			if (!campaignId) {
+				populateScenes();
+				return;
+			}
+			setStatus("Loading scenes...");
+			try {
+				const response = await fetch(`${API_BASE_URL}/campaigns/${encodeURIComponent(campaignId)}/scenes`);
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+				scenes = await response.json();
+				populateScenes();
+				setStatus("");
+			} catch (error) {
+				populateScenes();
+				setStatus("Unable to load scenes for this campaign.");
+			}
+		}
+
+		function populateCampaigns() {
+			campaignSelect.innerHTML = "";
+			const placeholder = document.createElement("option");
+			placeholder.value = "";
+			placeholder.textContent = "Select a campaign";
+			campaignSelect.appendChild(placeholder);
+
+			campaigns.forEach((campaign) => {
+				const option = document.createElement("option");
+				option.value = campaign.id;
+				option.textContent = campaign.name;
+				campaignSelect.appendChild(option);
+			});
+		}
+
+		function populateScenes() {
+			sceneSelect.innerHTML = "";
+			const placeholder = document.createElement("option");
+			placeholder.value = "";
+			placeholder.textContent = "Select a scene";
+			sceneSelect.appendChild(placeholder);
+
+			scenes.forEach((scene) => {
+				const option = document.createElement("option");
+				option.value = scene.id;
+				option.textContent = scene.name;
+				sceneSelect.appendChild(option);
+			});
+		}
+
+		function updateSelections() {
+			if (campaigns.length) {
+				campaignSelect.value = settings.campaignId || "";
+			}
+			if (scenes.length) {
+				sceneSelect.value = settings.sceneId || "";
+			}
+		}
+
+		campaignSelect.addEventListener("change", async () => {
+			const selected = campaigns.find((campaign) => campaign.id === campaignSelect.value);
+			setSettings({
+				campaignId: selected?.id,
+				campaignName: selected?.name,
+				sceneId: undefined,
+				sceneName: undefined,
+			});
+			await loadScenes(selected?.id);
+			sceneSelect.value = "";
+		});
+
+		sceneSelect.addEventListener("change", () => {
+			const selected = scenes.find((scene) => scene.id === sceneSelect.value);
+			setSettings({
+				sceneId: selected?.id,
+				sceneName: selected?.name,
+			});
+		});
+	</script>
+</body>
+
+</html>
