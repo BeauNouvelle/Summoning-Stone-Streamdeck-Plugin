@@ -4,6 +4,11 @@
 		"customConditions": [
 			"node"
 		],
+		"lib": [
+			"ES2022",
+			"DOM",
+			"DOM.Iterable"
+		],
 		"module": "ES2022",
 		"moduleResolution": "Bundler",
 		"noImplicitOverride": true

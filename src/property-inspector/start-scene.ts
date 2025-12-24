@@ -1,4 +1,4 @@
-import streamDeck from "@elgato/streamdeck/property-inspector";
+import streamDeck from "./streamdeck";
 
 const API_BASE_URL = "http://127.0.0.1:7123";
 
@@ -196,12 +196,14 @@ async function handleCampaignChange() {
 	const currentValue = campaignSelect.value;
 	const selected = campaigns.find((campaign) => campaign.id === currentValue);
 	
-	streamDeck.settings.setSettings({
+	settings = {
+		...settings,
 		campaignId: selected?.id,
 		campaignName: selected?.name,
 		sceneId: undefined,
 		sceneName: undefined,
-	});
+	};
+	streamDeck.settings.setSettings(settings);
 	
 	await loadScenes(selected?.id);
 	if (sceneSelect) sceneSelect.value = "";
@@ -212,14 +214,16 @@ function handleSceneChange() {
 	const currentValue = sceneSelect.value;
 	const selected = scenes.find((scene) => scene.id === currentValue);
 	
-	streamDeck.settings.setSettings({
+	settings = {
+		...settings,
 		sceneId: selected?.id,
 		sceneName: selected?.name,
-	});
+	};
+	streamDeck.settings.setSettings(settings);
 }
 
 // Listen for settings from Stream Deck
-streamDeck.onDidReceiveSettings(({ payload }) => {
+streamDeck.onDidReceiveSettings(({ payload }: { payload: { settings?: SceneSettings } }) => {
 	settings = payload.settings || {};
 	void updateSelections();
 });

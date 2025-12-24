@@ -1,4 +1,4 @@
-import streamDeck from "@elgato/streamdeck/property-inspector";
+import streamDeck from "./streamdeck";
 
 const API_BASE_URL = "http://127.0.0.1:7123";
 
@@ -119,18 +119,21 @@ function handleSelectionChange() {
 	const selected = sfxList.find((item) => item.name === sfxSelect.value);
 	
 	if (!selected) {
-		streamDeck.settings.setSettings({ sfxName: undefined, sfxTitle: undefined });
+		settings = { ...settings, sfxName: undefined, sfxTitle: undefined };
+		streamDeck.settings.setSettings(settings);
 		return;
 	}
 	
-	streamDeck.settings.setSettings({ 
-		sfxName: selected.name, 
-		sfxTitle: selected.localizedName || selected.name 
-	});
+	settings = {
+		...settings,
+		sfxName: selected.name,
+		sfxTitle: selected.localizedName || selected.name,
+	};
+	streamDeck.settings.setSettings(settings);
 }
 
 // Listen for settings from Stream Deck
-streamDeck.onDidReceiveSettings(({ payload }) => {
+streamDeck.onDidReceiveSettings(({ payload }: { payload: { settings?: SfxSettings } }) => {
 	settings = payload.settings || {};
 	updateSelection();
 });
