@@ -34,10 +34,19 @@ let settingsReady = new Promise<Record<string, unknown>>((resolve) => {
 
 const logPrefix = "[Summoning Stone PI]";
 function debugLog(message: string, data?: unknown) {
+	const logLine = data === undefined ? message : `${message} ${JSON.stringify(data)}`;
 	if (data === undefined) {
 		console.log(`${logPrefix} ${message}`);
 	} else {
 		console.log(`${logPrefix} ${message}`, data);
+	}
+
+	if (typeof document !== "undefined") {
+		const debugEl = document.getElementById("debug-log");
+		if (debugEl) {
+			const time = new Date().toLocaleTimeString();
+			debugEl.textContent = `${time} ${logPrefix} ${logLine}\n${debugEl.textContent ?? ""}`;
+		}
 	}
 }
 
