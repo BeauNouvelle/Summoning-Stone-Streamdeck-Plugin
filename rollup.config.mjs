@@ -11,7 +11,7 @@ const sdPlugin = "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music
 /**
  * @type {import('rollup').RollupOptions}
  */
-const config = {
+const plugin = {
 	input: "src/plugin.ts",
 	output: {
 		file: `${sdPlugin}/bin/plugin.js`,
@@ -46,4 +46,54 @@ const config = {
 	]
 };
 
-export default config;
+/**
+ * @type {import('rollup').RollupOptions}
+ */
+const propertyInspector = {
+	input: "src/property-inspector/play-sfx.ts",
+	output: {
+		file: `${sdPlugin}/bin/play-sfx-pi.js`,
+		sourcemap: isWatching,
+		sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
+			return url.pathToFileURL(path.resolve(path.dirname(sourcemapPath), relativeSourcePath)).href;
+		}
+	},
+	plugins: [
+		typescript({
+			mapRoot: isWatching ? "./" : undefined
+		}),
+		nodeResolve({
+			browser: true, // Important: this is for browser environment
+			exportConditions: ["browser", "default"]
+		}),
+		commonjs(),
+		!isWatching && terser()
+	]
+};
+
+/**
+ * @type {import('rollup').RollupOptions}
+ */
+const startScenePI = {
+	input: "src/property-inspector/start-scene.ts",
+	output: {
+		file: `${sdPlugin}/bin/start-scene-pi.js`,
+		sourcemap: isWatching,
+		sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
+			return url.pathToFileURL(path.resolve(path.dirname(sourcemapPath), relativeSourcePath)).href;
+		}
+	},
+	plugins: [
+		typescript({
+			mapRoot: isWatching ? "./" : undefined
+		}),
+		nodeResolve({
+			browser: true,
+			exportConditions: ["browser", "default"]
+		}),
+		commonjs(),
+		!isWatching && terser()
+	]
+};
+
+export default [plugin, propertyInspector, startScenePI];

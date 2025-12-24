@@ -1,207 +1,29 @@
 <!DOCTYPE html>
 <html>
-
-<head lang="en">
-	<title>Play SFX Settings</title>
+<head>
 	<meta charset="utf-8" />
-	<script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
-	<style>
-		.status {
-			color: #cccccc;
-			font-size: 12px;
-			margin: 8px 0 0 0;
-		}
-	</style>
+	<title>Play SFX Settings</title>
+	<link rel="stylesheet" href="sdpi.css">
 </head>
-
 <body>
-	<sdpi-item label="Sound Effect">
-		<sdpi-select id="sfx-select" disabled></sdpi-select>
-	</sdpi-item>
-	<sdpi-item>
-		<sdpi-button id="retry-button">Retry Connection</sdpi-button>
-	</sdpi-item>
-	<p class="status" id="status"></p>
+	<div class="sdpi-wrapper">
+		<div type="select" class="sdpi-item">
+			<div class="sdpi-item-label">Sound Effect</div>
+			<select class="sdpi-item-value select" id="sfx-select" disabled>
+				<option value="">Loading...</option>
+			</select>
+		</div>
+		
+		<div type="button" class="sdpi-item">
+			<button class="sdpi-item-value" id="retry-button">Retry Connection</button>
+		</div>
 
-	<script>
-		/* global SDPIComponents */
-		const API_BASE_URL = "http://127.0.0.1:7123";
-		const sfxSelect = document.getElementById("sfx-select");
-		const statusEl = document.getElementById("status");
-		const retryButton = document.getElementById("retry-button");
+		<div class="sdpi-item">
+			<div class="sdpi-item-label" style="font-size: 11px; color: #999;" id="status">Connecting...</div>
+		</div>
+	</div>
 
-		let websocket = null;
-		let uuid = null;
-		let actionContext = null;
-		let settings = {};
-		let sfxList = [];
-		let retryTimer = null;
-		let isLoadingSfx = false;
-		let hasLoadedSfx = false;
-		let isApplyingSettings = false;
-
-		function setStatus(message) {
-			statusEl.textContent = message || "";
-		}
-
-		function scheduleRetry() {
-			if (retryTimer) return;
-			retryTimer = window.setTimeout(() => {
-				retryTimer = null;
-				loadSfx();
-			}, 5000);
-		}
-
-		function clearRetry() {
-			if (retryTimer) {
-				window.clearTimeout(retryTimer);
-				retryTimer = null;
-			}
-		}
-
-		function setSelectEnabled(enabled) {
-			sfxSelect.disabled = !enabled;
-		}
-
-		function setOptionsPlaceholder(label) {
-			sfxSelect.innerHTML = "";
-			const placeholder = document.createElement("option");
-			placeholder.value = "";
-			placeholder.textContent = label;
-			sfxSelect.appendChild(placeholder);
-		}
-
-		async function fetchJson(path) {
-			try {
-				const response = await fetch(`${API_BASE_URL}${path}`);
-				if (response.status === 401) {
-					throw new Error("Please sign in to Summoning Stone to load SFX.");
-				}
-				if (!response.ok) {
-					throw new Error(`Unexpected response (${response.status}).`);
-				}
-				return await response.json();
-			} catch (error) {
-				throw error;
-			}
-		}
-
-		function connectElgatoStreamDeck(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
-			uuid = inUUID;
-			if (inActionInfo) {
-				try {
-					const payload = typeof inActionInfo === "string" ? JSON.parse(inActionInfo) : inActionInfo;
-					actionContext = payload?.context || null;
-					settings = payload?.payload?.settings || {};
-				} catch (error) {
-					settings = {};
-				}
-			}
-
-			websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
-			websocket.onopen = () => {
-				websocket.send(JSON.stringify({ event: inRegisterEvent, uuid }));
-				requestSettings();
-				loadSfx();
-			};
-			websocket.onmessage = (event) => {
-				const message = JSON.parse(event.data);
-				if (message.event === "didReceiveSettings") {
-					settings = message.payload.settings || {};
-					updateSelection();
-				}
-			};
-		}
-
-		function requestSettings() {
-			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
-			const context = actionContext || uuid;
-			websocket.send(JSON.stringify({ event: "getSettings", context }));
-		}
-
-		function setSettings(patch) {
-			settings = { ...settings, ...patch };
-			if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
-			const context = actionContext || uuid;
-			websocket.send(JSON.stringify({ event: "setSettings", context, payload: settings }));
-		}
-
-		async function loadSfx() {
-			if (isLoadingSfx) return;
-			isLoadingSfx = true;
-			clearRetry();
-			setStatus("Loading SFX...");
-			setSelectEnabled(false);
-			setOptionsPlaceholder("Loading...");
-			try {
-				sfxList = await fetchJson("/sfx");
-				populateOptions();
-				updateSelection();
-				setStatus("");
-				setSelectEnabled(true);
-				hasLoadedSfx = true;
-			} catch (error) {
-				const message = error?.message || "Unable to load SFX.";
-				setOptionsPlaceholder("Summoning Stone not connected");
-				setStatus(`${message} Open the Summoning Stone app to continue. Retrying...`);
-				scheduleRetry();
-			} finally {
-				isLoadingSfx = false;
-			}
-		}
-
-		function populateOptions() {
-			setOptionsPlaceholder("Select a sound effect");
-
-			sfxList.forEach((item) => {
-				const option = document.createElement("option");
-				option.value = item.name;
-				option.textContent = item.localizedName || item.name;
-				sfxSelect.appendChild(option);
-			});
-		}
-
-		function updateSelection() {
-			if (!sfxList.length) return;
-			isApplyingSettings = true;
-			sfxSelect.value = settings.sfxName || "";
-			isApplyingSettings = false;
-		}
-
-		function handleSelectionChange() {
-			if (isApplyingSettings || !sfxList.length) return;
-			const selected = sfxList.find((item) => item.name === sfxSelect.value);
-			if (!selected) {
-				setSettings({ sfxName: undefined, sfxTitle: undefined });
-				return;
-			}
-			setSettings({ sfxName: selected.name, sfxTitle: selected.localizedName || selected.name });
-		}
-
-		sfxSelect.addEventListener("change", handleSelectionChange);
-		sfxSelect.addEventListener("input", handleSelectionChange);
-		sfxSelect.addEventListener("valuechange", handleSelectionChange);
-
-		retryButton.addEventListener("click", () => {
-			loadSfx();
-		});
-
-		function ensureSfxLoaded() {
-			if (hasLoadedSfx || isLoadingSfx) return;
-			loadSfx();
-		}
-
-		window.connectElgatoStreamDeck = connectElgatoStreamDeck;
-		window.addEventListener("load", ensureSfxLoaded);
-		document.addEventListener("visibilitychange", () => {
-			if (!document.hidden) {
-				ensureSfxLoaded();
-			}
-		});
-
-		setOptionsPlaceholder("Loading...");
-		setStatus("Waiting for Stream Deck...");
-	</script>
+	<!-- Load the bundled Property Inspector code -->
+	<script src="../bin/play-sfx-pi.js"></script>
 </body>
-
 </html>
