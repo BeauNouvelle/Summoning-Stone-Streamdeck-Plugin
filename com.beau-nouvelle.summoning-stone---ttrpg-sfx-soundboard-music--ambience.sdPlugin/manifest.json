@@ -18,6 +18,22 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Scene Selector",
+			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.scene-selector",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Select a campaign scene for playback.",
+			"PropertyInspectorPath": "ui/scene-selector.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "Summoning Stone - TTRPG SFX Soundboard, Music & Ambience",
