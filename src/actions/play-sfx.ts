@@ -1,22 +1,19 @@
 import { action, DidReceiveSettingsEvent, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
 import type { KeyAction } from "@elgato/streamdeck";
 
-/**
- * An example action class.
- */
 @action({ UUID: "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.increment" })
-export class IncrementCounter extends SingletonAction<CounterSettings> {
+export class PlaySfx extends SingletonAction<PlaySfxSettings> {
 	private currentIconName?: string;
 
-	override async onWillAppear(ev: WillAppearEvent<CounterSettings>): Promise<void> {
+	override async onWillAppear(ev: WillAppearEvent<PlaySfxSettings>): Promise<void> {
 		await this.updateIcon(ev.action, ev.payload.settings.sfxName);
 	}
 
-	override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<CounterSettings>): Promise<void> {
+	override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<PlaySfxSettings>): Promise<void> {
 		await this.updateIcon(ev.action, ev.payload.settings.sfxName);
 	}
 
-	override async onKeyDown(ev: KeyDownEvent<CounterSettings>): Promise<void> {
+	override async onKeyDown(ev: KeyDownEvent<PlaySfxSettings>): Promise<void> {
 		const { sfxName, volume, reverb } = ev.payload.settings;
 		if (!sfxName) {
 			return;
@@ -37,7 +34,7 @@ export class IncrementCounter extends SingletonAction<CounterSettings> {
 		await fetch(endpoint, { method: "POST" });
 	}
 
-	private async updateIcon(action: KeyAction<CounterSettings>, sfxName?: string): Promise<void> {
+	private async updateIcon(action: KeyAction<PlaySfxSettings>, sfxName?: string): Promise<void> {
 		if (!sfxName) {
 			if (this.currentIconName) {
 				await action.setImage(undefined);
@@ -67,10 +64,7 @@ export class IncrementCounter extends SingletonAction<CounterSettings> {
 	}
 }
 
-/**
- * Settings for {@link IncrementCounter}.
- */
-type CounterSettings = {
+type PlaySfxSettings = {
 	sfxName?: string;
 	volume?: number;
 	reverb?: number;

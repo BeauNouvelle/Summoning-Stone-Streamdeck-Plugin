@@ -1,6 +1,6 @@
 import streamDeck from "@elgato/streamdeck";
 
-import { IncrementCounter } from "./actions/increment-counter";
+import { PlaySfx } from "./actions/play-sfx";
 import { SceneSelector } from "./actions/scene-selector";
 import { StopScene } from "./actions/stop-scene";
 
@@ -8,7 +8,7 @@ import { StopScene } from "./actions/stop-scene";
 streamDeck.logger.setLevel("trace");
 
 // Register the increment action.
-streamDeck.actions.registerAction(new IncrementCounter());
+streamDeck.actions.registerAction(new PlaySfx());
 streamDeck.actions.registerAction(new SceneSelector());
 streamDeck.actions.registerAction(new StopScene());
 
