@@ -17,13 +17,24 @@ export class IncrementCounter extends SingletonAction<CounterSettings> {
 	}
 
 	override async onKeyDown(ev: KeyDownEvent<CounterSettings>): Promise<void> {
-		const sfxName = ev.payload.settings.sfxName;
+		const { sfxName, volume, reverb } = ev.payload.settings;
 		if (!sfxName) {
 			return;
 		}
 
 		const encodedName = encodeURIComponent(sfxName);
-		await fetch(`http://127.0.0.1:7123/sfx/${encodedName}/play`, { method: "POST" });
+		const params = new URLSearchParams();
+		if (typeof volume === "number") {
+			params.set("volume", volume.toString());
+		}
+		if (typeof reverb === "number") {
+			params.set("reverb", reverb.toString());
+		}
+		const query = params.toString();
+		const endpoint = query.length
+			? `http://127.0.0.1:7123/sfx/${encodedName}/play?${query}`
+			: `http://127.0.0.1:7123/sfx/${encodedName}/play`;
+		await fetch(endpoint, { method: "POST" });
 	}
 
 	private async updateIcon(action: KeyAction<CounterSettings>, sfxName?: string): Promise<void> {
@@ -61,4 +72,6 @@ export class IncrementCounter extends SingletonAction<CounterSettings> {
  */
 type CounterSettings = {
 	sfxName?: string;
+	volume?: number;
+	reverb?: number;
 };
