@@ -47,10 +47,6 @@
 <body>
     <div class="sdpi-wrapper">
         <div class="sdpi-item">
-            <div class="sdpi-item-label">Increment By</div>
-            <input type="number" class="sdpi-item-value" id="increment-by-input" min="1" max="5" step="1">
-        </div>
-        <div class="sdpi-item">
             <div class="sdpi-item-label">SFX</div>
             <select name="sfxName" id="sfx-select" class="sdpi-item-value select"></select>
         </div>
@@ -58,8 +54,6 @@
     <script>
         const apiUrl = "http://127.0.0.1:7123/sfx";
         const sfxSelect = document.getElementById("sfx-select");
-        const incrementByInput = document.getElementById("increment-by-input");
-
         let websocket = null;
         let uuid = null;
         let settings = {};
@@ -135,15 +129,9 @@
                     event: inRegisterEvent,
                     uuid: inUUID
                 });
-                incrementByInput.value = settings.incrementBy ?? 1;
                 loadSfxOptions();
             };
         }
-
-        incrementByInput.addEventListener("input", (event) => {
-            const value = Number(event.target.value || 1);
-            setSettings({ incrementBy: value });
-        });
 
         sfxSelect.addEventListener("change", (event) => {
             setSettings({ sfxName: event.target.value });
