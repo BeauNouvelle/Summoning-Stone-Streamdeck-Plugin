@@ -49,18 +49,17 @@ const plugin = {
 /**
  * @type {import('rollup').RollupOptions}
  */
-const propertyInspector = {
+const propertyInspectorPlaySfx = {
 	input: "src/property-inspector/play-sfx.ts",
 	output: {
 		file: `${sdPlugin}/bin/play-sfx-pi.js`,
+		format: "iife", // Important: use IIFE format for browser
 		sourcemap: isWatching,
-		sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
-			return url.pathToFileURL(path.resolve(path.dirname(sourcemapPath), relativeSourcePath)).href;
-		}
 	},
 	plugins: [
 		typescript({
-			mapRoot: isWatching ? "./" : undefined
+			mapRoot: isWatching ? "./" : undefined,
+			tsconfig: "./tsconfig.json"
 		}),
 		nodeResolve({
 			browser: true, // Important: this is for browser environment
@@ -74,18 +73,17 @@ const propertyInspector = {
 /**
  * @type {import('rollup').RollupOptions}
  */
-const startScenePI = {
+const propertyInspectorStartScene = {
 	input: "src/property-inspector/start-scene.ts",
 	output: {
 		file: `${sdPlugin}/bin/start-scene-pi.js`,
+		format: "iife", // Important: use IIFE format for browser
 		sourcemap: isWatching,
-		sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
-			return url.pathToFileURL(path.resolve(path.dirname(sourcemapPath), relativeSourcePath)).href;
-		}
 	},
 	plugins: [
 		typescript({
-			mapRoot: isWatching ? "./" : undefined
+			mapRoot: isWatching ? "./" : undefined,
+			tsconfig: "./tsconfig.json"
 		}),
 		nodeResolve({
 			browser: true,
@@ -96,4 +94,4 @@ const startScenePI = {
 	]
 };
 
-export default [plugin, propertyInspector, startScenePI];
+export default [plugin, propertyInspectorPlaySfx, propertyInspectorStartScene];

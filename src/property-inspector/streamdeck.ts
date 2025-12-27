@@ -27,15 +27,9 @@ const settingsListeners = new Set<StreamDeckSettingsListener<Record<string, unkn
 let webSocket: WebSocket | null = null;
 let context: string | null = null;
 let cachedSettings: Record<string, unknown> = {};
-let resolveSettings: ((settings: Record<string, unknown>) => void) | null = null;
-let settingsResolved = false;
-let settingsReady = new Promise<Record<string, unknown>>((resolve) => {
-	resolveSettings = resolve;
-});
 
 const logPrefix = "[Summoning Stone PI]";
 function debugLog(message: string, data?: unknown) {
-	const logLine = data === undefined ? message : `${message} ${JSON.stringify(data)}`;
 	if (data === undefined) {
 		console.log(`${logPrefix} ${message}`);
 	} else {
@@ -46,7 +40,7 @@ function debugLog(message: string, data?: unknown) {
 		const debugEl = document.getElementById("debug-log");
 		if (debugEl) {
 			const time = new Date().toLocaleTimeString();
-			debugEl.textContent = `${time} ${logPrefix} ${logLine}\n${debugEl.textContent ?? ""}`;
+			debugEl.textContent = `[${time}] ${message}${data !== undefined ? ": " + JSON.stringify(data) : ""}\n${debugEl.textContent ?? ""}`;
 		}
 	}
 }
@@ -59,34 +53,19 @@ function parseJson<T>(value: T | string): T {
 }
 
 function emitSettings(settings: Record<string, unknown>) {
+	debugLog("Emitting settings to listeners", settings);
 	const payload = { settings };
 	for (const listener of settingsListeners) {
 		listener({ payload });
 	}
 }
 
-function setCachedSettings(nextSettings: Record<string, unknown>) {
-	cachedSettings = nextSettings;
-	if (resolveSettings) {
-		resolveSettings(cachedSettings);
-		resolveSettings = null;
-		settingsResolved = true;
-	}
-}
-
-function ensureSettingsPromise() {
-	if (settingsResolved) {
-		settingsResolved = false;
-		settingsReady = new Promise<Record<string, unknown>>((resolve) => {
-			resolveSettings = resolve;
-		});
-	}
-}
-
 function sendMessage(message: Record<string, unknown>) {
 	if (!webSocket || webSocket.readyState !== WebSocket.OPEN) {
+		debugLog("Cannot send message - WebSocket not ready", message);
 		return;
 	}
+	debugLog("Sending message", message);
 	webSocket.send(JSON.stringify(message));
 }
 
@@ -94,31 +73,55 @@ function connectElgatoStreamDeck(
 	port: string,
 	uuid: string,
 	registerEvent: string,
-	_: unknown,
+	_info: unknown,
 	actionInfo?: StreamDeckConnectionInfo | string,
 ) {
-	debugLog("Connecting property inspector...");
-	ensureSettingsPromise();
+	debugLog("connectElgatoStreamDeck called", { port, uuid, registerEvent });
+	
 	const parsedInfo = parseJson<StreamDeckConnectionInfo>(actionInfo ?? {});
 	context = parsedInfo?.context ?? uuid;
-	setCachedSettings(parsedInfo?.payload?.settings ?? {});
-	emitSettings(cachedSettings);
-	debugLog("Initial settings received from Stream Deck", cachedSettings);
+	cachedSettings = parsedInfo?.payload?.settings ?? {};
+	
+	debugLog("Initial settings from actionInfo", cachedSettings);
+	debugLog("Context", context);
 
 	webSocket = new WebSocket(`ws://127.0.0.1:${port}`);
+	
 	webSocket.onopen = () => {
+		debugLog("WebSocket opened");
 		sendMessage({ event: registerEvent, uuid });
-		debugLog("WebSocket connected.");
-	};
-	webSocket.onmessage = (event) => {
-		const message = parseJson<Record<string, unknown>>(event.data as string);
-		if (message?.event === "didReceiveSettings" && typeof message.payload === "object") {
-			const payload = message.payload as { settings?: Record<string, unknown> };
-			setCachedSettings(payload.settings ?? {});
-			emitSettings(cachedSettings);
-			debugLog("Settings updated from Stream Deck", cachedSettings);
+		
+		// Request settings explicitly
+		if (context) {
+			sendMessage({ event: "getSettings", context });
 		}
 	};
+	
+	webSocket.onmessage = (event) => {
+		const message = parseJson<Record<string, unknown>>(event.data as string);
+		debugLog("Received message", message);
+		
+		if (message?.event === "didReceiveSettings" && typeof message.payload === "object") {
+			const payload = message.payload as { settings?: Record<string, unknown> };
+			cachedSettings = payload.settings ?? {};
+			debugLog("Settings updated from didReceiveSettings", cachedSettings);
+			emitSettings(cachedSettings);
+		}
+	};
+	
+	webSocket.onerror = (error) => {
+		debugLog("WebSocket error", error);
+	};
+	
+	webSocket.onclose = () => {
+		debugLog("WebSocket closed");
+	};
+	
+	// Emit initial settings after a small delay to ensure listeners are set up
+	setTimeout(() => {
+		debugLog("Emitting initial settings");
+		emitSettings(cachedSettings);
+	}, 100);
 }
 
 declare global {
@@ -127,55 +130,37 @@ declare global {
 	}
 }
 
+// Define the function globally BEFORE any other code runs
 if (typeof window !== "undefined") {
+	debugLog("Registering connectElgatoStreamDeck globally");
 	window.connectElgatoStreamDeck = connectElgatoStreamDeck;
-
-	const params = new URLSearchParams(window.location.search);
-	const port = params.get("port");
-	const uuid = params.get("uuid");
-	const registerEvent = params.get("registerEvent");
-	const info = params.get("info");
-	const actionInfo = params.get("actionInfo");
-	if (port && uuid && registerEvent) {
-		let parsedInfo: unknown;
-		let parsedActionInfo: StreamDeckConnectionInfo | string | undefined;
-		try {
-			parsedInfo = info ? parseJson(info) : undefined;
-			parsedActionInfo = actionInfo ? parseJson<StreamDeckConnectionInfo | string>(actionInfo) : undefined;
-		} catch (error) {
-			debugLog("Failed to parse connection payload", String(error));
-		}
-		connectElgatoStreamDeck(
-			port,
-			uuid,
-			registerEvent,
-			parsedInfo,
-			parsedActionInfo,
-		);
-	}
 }
 
 const streamDeck: StreamDeckApi<Record<string, unknown>> = {
 	settings: {
 		async getSettings() {
-			if (context) {
+			debugLog("getSettings called");
+			if (context && webSocket && webSocket.readyState === WebSocket.OPEN) {
 				sendMessage({ event: "getSettings", context });
 			}
-			debugLog("Requested settings from Stream Deck.");
-			if (settingsResolved) {
-				return Promise.resolve(cachedSettings);
-			}
-			return settingsReady;
+			return cachedSettings;
 		},
 		setSettings(settings: Record<string, unknown>) {
-			if (!context) return;
-			const nextSettings = { ...cachedSettings, ...settings };
-			setCachedSettings(nextSettings);
-			sendMessage({ event: "setSettings", context, payload: nextSettings });
-			debugLog("Sent settings to Stream Deck", nextSettings);
+			debugLog("setSettings called", settings);
+			if (!context) {
+				debugLog("Cannot set settings - no context");
+				return;
+			}
+			
+			// Merge with existing settings
+			cachedSettings = { ...cachedSettings, ...settings };
+			debugLog("Merged settings", cachedSettings);
+			
+			sendMessage({ event: "setSettings", context, payload: cachedSettings });
 		},
 	},
 	onDidReceiveSettings(handler) {
+		debugLog("Adding settings listener");
 		settingsListeners.add(handler);
 	},
 };

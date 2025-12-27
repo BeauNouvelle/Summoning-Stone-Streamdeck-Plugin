@@ -71,8 +71,8 @@
 		}
 	],
 	"Nodejs": {
-		"Version": "20",
-		"Debug": "enabled"
-	},
+  "Version": "20",
+  "Debug": "enabled"
+},
 	"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience"
 }

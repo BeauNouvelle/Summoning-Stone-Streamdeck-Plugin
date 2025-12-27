@@ -1,34 +1,205 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8" />
-	<title>Play SFX Settings</title>
-	<link rel="stylesheet" href="sdpi.css">
+  <meta charset="utf-8">
+  <title>Play SFX Settings</title>
+  <style>
+    body { 
+      margin: 20px; 
+      font-family: -apple-system, sans-serif; 
+      background: #2d2d2d; 
+      color: white; 
+    }
+    label { display: block; margin-bottom: 5px; font-size: 13px; }
+    select, button { 
+      width: 100%; 
+      padding: 8px; 
+      margin-bottom: 10px;
+      background: #3a3a3a; 
+      color: white; 
+      border: 1px solid #555;
+      border-radius: 4px;
+    }
+    button { cursor: pointer; }
+    button:hover { background: #4a4a4a; }
+    .status { 
+      margin-top: 10px; 
+      font-size: 12px; 
+      color: #999; 
+    }
+  </style>
 </head>
 <body>
-	<div class="sdpi-wrapper">
-		<div type="select" class="sdpi-item">
-			<div class="sdpi-item-label">Sound Effect</div>
-			<select class="sdpi-item-value select" id="sfx-select" disabled>
-				<option value="">Loading...</option>
-			</select>
-		</div>
-		
-		<div type="button" class="sdpi-item">
-			<button class="sdpi-item-value" id="retry-button">Retry Connection</button>
-		</div>
+  <label>Sound Effect:</label>
+  <select id="sfx-select" disabled>
+    <option value="">Loading...</option>
+  </select>
+  
+  <button id="retry-button">Retry Connection</button>
+  
+  <div class="status" id="status">Connecting...</div>
 
-		<div class="sdpi-item">
-			<div class="sdpi-item-label" style="font-size: 11px; color: #999;" id="status">Connecting...</div>
-		</div>
+  <script>
+    const API_BASE_URL = "http://127.0.0.1:7123";
+    
+    let websocket = null;
+    let uuid = null;
+    let actionContext = null;
+    let settings = {};
+    let sfxList = [];
 
-		<div class="sdpi-item">
-			<div class="sdpi-item-label">Debug Log</div>
-			<pre class="sdpi-item-value" id="debug-log" style="white-space: pre-wrap; max-height: 140px; overflow: auto;"></pre>
-		</div>
-	</div>
+    function log(msg) {
+      console.log('[PI]', msg);
+    }
 
-	<!-- Load the bundled Property Inspector code -->
-	<script src="../bin/play-sfx-pi.js"></script>
+    // SDK v3: Get connection info from URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const port = params.get('port');
+    const propertyInspectorUUID = params.get('propertyInspectorUUID');
+    const registerEvent = params.get('registerEvent');
+    const actionInfo = params.get('actionInfo');
+
+    log('URL params: port=' + port + ', uuid=' + propertyInspectorUUID);
+    
+    // Show URL for debugging
+    document.getElementById('status').textContent = 'URL: ' + window.location.href.substring(0, 100);
+
+    if (port && propertyInspectorUUID && registerEvent) {
+      // Parse action info
+      if (actionInfo) {
+        try {
+          const info = JSON.parse(actionInfo);
+          actionContext = info.context;
+          settings = info.payload?.settings || {};
+          log('Initial settings: ' + JSON.stringify(settings));
+        } catch (e) {
+          log('Error parsing actionInfo: ' + e.message);
+        }
+      }
+
+      // Connect WebSocket
+      log('Connecting to ws://127.0.0.1:' + port);
+      websocket = new WebSocket('ws://127.0.0.1:' + port);
+
+      websocket.onopen = function() {
+        log('WebSocket connected');
+        websocket.send(JSON.stringify({
+          event: registerEvent,
+          uuid: propertyInspectorUUID
+        }));
+        
+        // Load SFX
+        loadSfx();
+      };
+
+      websocket.onmessage = function(evt) {
+        const msg = JSON.parse(evt.data);
+        log('Received: ' + msg.event);
+        
+        if (msg.event === 'didReceiveSettings') {
+          settings = msg.payload.settings || {};
+          log('Settings updated: ' + JSON.stringify(settings));
+          updateSelect();
+        }
+      };
+      
+      websocket.onerror = function(err) {
+        log('WebSocket error');
+      };
+    } else {
+      log('ERROR: Missing URL parameters!');
+      document.getElementById('status').textContent = 'Error: Missing connection parameters';
+    }
+
+    // Load SFX list from API
+    async function loadSfx() {
+      log('Loading SFX...');
+      const select = document.getElementById('sfx-select');
+      const status = document.getElementById('status');
+      
+      status.textContent = 'Loading SFX...';
+      select.disabled = true;
+      
+      try {
+        const response = await fetch(API_BASE_URL + '/sfx');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        
+        sfxList = await response.json();
+        log('Loaded ' + sfxList.length + ' SFX');
+        
+        // Populate dropdown
+        select.innerHTML = '<option value="">Select a sound effect</option>';
+        sfxList.forEach(function(sfx) {
+          const option = document.createElement('option');
+          option.value = sfx.name;
+          option.textContent = sfx.localizedName || sfx.name;
+          select.appendChild(option);
+        });
+        
+        select.disabled = false;
+        status.textContent = '';
+        
+        updateSelect();
+        
+      } catch (err) {
+        log('Failed to load SFX: ' + err.message);
+        select.innerHTML = '<option value="">Failed to load</option>';
+        status.textContent = 'Cannot connect to Summoning Stone';
+        setTimeout(loadSfx, 5000);
+      }
+    }
+
+    function updateSelect() {
+      const select = document.getElementById('sfx-select');
+      if (settings.sfxName && sfxList.length > 0) {
+        select.value = settings.sfxName;
+        log('Set select to: ' + settings.sfxName);
+      }
+    }
+
+    function saveSettings() {
+      if (!websocket || websocket.readyState !== WebSocket.OPEN || !actionContext) {
+        log('Cannot save - not ready');
+        return;
+      }
+      
+      log('Saving: ' + JSON.stringify(settings));
+      websocket.send(JSON.stringify({
+        event: 'setSettings',
+        context: actionContext,
+        payload: settings
+      }));
+    }
+
+    // Initialize when DOM is ready
+    window.addEventListener('DOMContentLoaded', function() {
+      const select = document.getElementById('sfx-select');
+      const retryBtn = document.getElementById('retry-button');
+      
+      select.addEventListener('change', function() {
+        const selectedName = select.value;
+        log('Selected: ' + selectedName);
+        
+        if (!selectedName) {
+          settings = { sfxName: undefined, sfxTitle: undefined };
+        } else {
+          const selected = sfxList.find(function(sfx) {
+            return sfx.name === selectedName;
+          });
+          
+          if (selected) {
+            settings = {
+              sfxName: selected.name,
+              sfxTitle: selected.localizedName || selected.name
+            };
+          }
+        }
+        
+        saveSettings();
+      });
+      
+      retryBtn.addEventListener('click', loadSfx);
+    });
+  </script>
 </body>
 </html>
