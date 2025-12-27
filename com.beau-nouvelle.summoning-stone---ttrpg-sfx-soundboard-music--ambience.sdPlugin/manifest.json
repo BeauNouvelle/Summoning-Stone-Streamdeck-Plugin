@@ -1,5 +1,5 @@
 {
-	"Name": "Summoning Stone - TTRPG SFX Soundboard, Music & Ambience",
+	"Name": "Summoning Stone Remote",
 	"Version": "0.1.0.0",
 	"Author": "Beau Nouvelle",
 	"Actions": [
@@ -51,7 +51,7 @@
 			]
 		}
 	],
-	"Category": "Summoning Stone - TTRPG SFX Soundboard, Music & Ambience",
+	"Category": "Summoning Stone Remote",
 	"CategoryIcon": "imgs/plugin/category-icon",
 	"CodePath": "bin/plugin.js",
 	"Description": "Trigger TTRPG scenes, ambience, and sound effects instantly via the Summoning Stone macOS app.",
