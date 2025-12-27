@@ -19,14 +19,12 @@ export class PlaySfx extends SingletonAction<PlaySfxSettings> {
 			return;
 		}
 
+		const normalizedVolume = typeof volume === "number" ? volume : 1;
+		const normalizedReverb = typeof reverb === "number" ? reverb : 0;
 		const encodedName = encodeURIComponent(sfxName);
 		const params = new URLSearchParams();
-		if (typeof volume === "number") {
-			params.set("volume", volume.toString());
-		}
-		if (typeof reverb === "number") {
-			params.set("reverb", reverb.toString());
-		}
+		params.set("volume", normalizedVolume.toString());
+		params.set("reverb", normalizedReverb.toString());
 		const query = params.toString();
 		const endpoint = query.length
 			? `http://127.0.0.1:7123/sfx/${encodedName}/play?${query}`

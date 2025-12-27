@@ -140,7 +140,7 @@
                     uuid: inUUID
                 });
                 volumeInput.value = settings.volume ?? 1;
-                reverbInput.value = settings.reverb ?? 1;
+                reverbInput.value = settings.reverb ?? 0;
                 loadSfxOptions();
             };
         }
@@ -155,8 +155,8 @@
         });
 
         reverbInput.addEventListener("input", (event) => {
-            const value = Number.parseFloat(event.target.value || "1");
-            setSettings({ reverb: Number.isNaN(value) ? 1 : value });
+            const value = Number.parseFloat(event.target.value || "0");
+            setSettings({ reverb: Number.isNaN(value) ? 0 : value });
         });
 
         window.connectElgatoStreamDeckSocket = registerPropertyInspector;
