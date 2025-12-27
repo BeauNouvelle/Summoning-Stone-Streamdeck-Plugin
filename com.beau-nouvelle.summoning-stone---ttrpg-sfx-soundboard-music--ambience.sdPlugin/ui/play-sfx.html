@@ -2,7 +2,7 @@
 <html>
 
 <head lang="en">
-    <title>Increment Counter Settings</title>
+    <title>Play SFX Settings</title>
     <meta charset="utf-8" />
     <style>
         body {
@@ -50,10 +50,20 @@
             <div class="sdpi-item-label">SFX</div>
             <select name="sfxName" id="sfx-select" class="sdpi-item-value select"></select>
         </div>
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Volume</div>
+            <input type="range" class="sdpi-item-value" id="volume-input" min="0" max="1" step="0.01">
+        </div>
+        <div class="sdpi-item">
+            <div class="sdpi-item-label">Reverb</div>
+            <input type="range" class="sdpi-item-value" id="reverb-input" min="0" max="1" step="0.01">
+        </div>
     </div>
     <script>
         const apiUrl = "http://127.0.0.1:7123/sfx";
         const sfxSelect = document.getElementById("sfx-select");
+        const volumeInput = document.getElementById("volume-input");
+        const reverbInput = document.getElementById("reverb-input");
         let websocket = null;
         let uuid = null;
         let settings = {};
@@ -129,12 +139,24 @@
                     event: inRegisterEvent,
                     uuid: inUUID
                 });
+                volumeInput.value = settings.volume ?? 1;
+                reverbInput.value = settings.reverb ?? 0;
                 loadSfxOptions();
             };
         }
 
         sfxSelect.addEventListener("change", (event) => {
             setSettings({ sfxName: event.target.value });
+        });
+
+        volumeInput.addEventListener("input", (event) => {
+            const value = Number.parseFloat(event.target.value || "1");
+            setSettings({ volume: Number.isNaN(value) ? 1 : value });
+        });
+
+        reverbInput.addEventListener("input", (event) => {
+            const value = Number.parseFloat(event.target.value || "0");
+            setSettings({ reverb: Number.isNaN(value) ? 0 : value });
         });
 
         window.connectElgatoStreamDeckSocket = registerPropertyInspector;
