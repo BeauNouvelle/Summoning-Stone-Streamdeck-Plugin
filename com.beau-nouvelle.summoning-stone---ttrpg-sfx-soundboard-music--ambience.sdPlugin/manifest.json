@@ -6,7 +6,7 @@
 		{
 			"Name": "Play SFX",
 			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.increment",
-			"Icon": "imgs/actions/counter/icon",
+			"Icon": "imgs/actions/sfx/icon",
 			"Tooltip": "Plays a selected SFX.",
 			"PropertyInspectorPath": "ui/play-sfx.html",
 			"Controllers": [
@@ -14,15 +14,15 @@
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/counter/key",
+					"Image": "imgs/actions/sfx/icon",
 					"TitleAlignment": "middle"
 				}
 			]
 		},
 		{
-			"Name": "Scene Selector",
+			"Name": "Start Scene",
 			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.scene-selector",
-			"Icon": "imgs/actions/counter/icon",
+			"Icon": "imgs/actions/scene/icon",
 			"Tooltip": "Select a campaign scene for playback.",
 			"PropertyInspectorPath": "ui/scene-selector.html",
 			"Controllers": [
@@ -30,7 +30,7 @@
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/counter/key",
+					"Image": "imgs/actions/scene/icon",
 					"TitleAlignment": "middle"
 				}
 			]
@@ -38,14 +38,14 @@
 		{
 			"Name": "Stop Scene",
 			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.stop-scene",
-			"Icon": "imgs/actions/counter/icon",
+			"Icon": "imgs/actions/scene/stop",
 			"Tooltip": "Stop the current scene.",
 			"Controllers": [
 				"Keypad"
 			],
 			"States": [
 				{
-					"Image": "imgs/actions/counter/key",
+					"Image": "imgs/actions/scene/stop",
 					"TitleAlignment": "middle"
 				}
 			]
@@ -64,10 +64,6 @@
 		{
 			"Platform": "mac",
 			"MinimumVersion": "12"
-		},
-		{
-			"Platform": "windows",
-			"MinimumVersion": "10"
 		}
 	],
 	"Nodejs": {
