@@ -1,7 +1,7 @@
 {
     "scripts": {
         "build": "rollup -c",
-        "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience\""
+        "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.beaunouvelle.summoning-stone\""
     },
     "type": "module",
     "devDependencies": {
