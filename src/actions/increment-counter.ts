@@ -38,4 +38,5 @@ export class IncrementCounter extends SingletonAction<CounterSettings> {
 type CounterSettings = {
 	count?: number;
 	incrementBy?: number;
+	sfxName?: string;
 };

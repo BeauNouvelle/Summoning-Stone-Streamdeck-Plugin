@@ -14,6 +14,64 @@
     <sdpi-item label="Increment By">
         <sdpi-range setting="incrementBy" min="1" max="5" step="1" default="1" showlabels></sdpi-range>
     </sdpi-item>
+    <sdpi-item label="SFX">
+        <sdpi-select id="sfx-select" setting="sfxName"></sdpi-select>
+    </sdpi-item>
+    <script>
+        const sfxSelect = document.getElementById("sfx-select");
+        const apiUrl = "http://127.0.0.1:7123/sfx";
+        let initialSfxName = null;
+
+        document.addEventListener("connected", (event) => {
+            initialSfxName = event?.detail?.actionInfo?.payload?.settings?.sfxName ?? null;
+        });
+
+        function populateSelect(names) {
+            sfxSelect.replaceChildren();
+            const placeholderOption = document.createElement("option");
+            placeholderOption.value = "";
+            placeholderOption.textContent = "Select an SFX";
+            sfxSelect.appendChild(placeholderOption);
+
+            names.forEach((name) => {
+                const option = document.createElement("option");
+                option.value = name;
+                option.textContent = name;
+                sfxSelect.appendChild(option);
+            });
+
+            if (initialSfxName) {
+                sfxSelect.value = initialSfxName;
+            }
+        }
+
+        async function loadSfxOptions() {
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                const items = Array.isArray(data)
+                    ? data
+                    : Array.isArray(data?.items)
+                        ? data.items
+                        : Array.isArray(data?.sfx)
+                            ? data.sfx
+                            : [];
+                const names = items
+                    .map((item) => item?.name)
+                    .filter((name) => typeof name === "string" && name.trim().length > 0);
+                populateSelect(names);
+            } catch (error) {
+                populateSelect([]);
+                const errorOption = document.createElement("option");
+                errorOption.value = "";
+                errorOption.textContent = "Unable to load SFX list";
+                errorOption.disabled = true;
+                sfxSelect.appendChild(errorOption);
+            }
+        }
+
+        loadSfxOptions();
+    </script>
 </body>
 
 </html>
