@@ -1,6 +1,6 @@
 import { action, KeyDownEvent, SingletonAction } from "@elgato/streamdeck";
 
-@action({ UUID: "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.scene-selector" })
+@action({ UUID: "com.beaunouvelle.summoning-stone.scene-selector" })
 export class SceneSelector extends SingletonAction<SceneSelectorSettings> {
 	override async onKeyDown(ev: KeyDownEvent<SceneSelectorSettings>): Promise<void> {
 		const { campaignId, sceneId } = ev.payload.settings;

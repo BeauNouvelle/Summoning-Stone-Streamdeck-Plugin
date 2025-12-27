@@ -1,7 +1,7 @@
 import { action, DidReceiveSettingsEvent, KeyDownEvent, SingletonAction, WillAppearEvent } from "@elgato/streamdeck";
-import type { KeyAction } from "@elgato/streamdeck";
+import type { DialAction, KeyAction } from "@elgato/streamdeck";
 
-@action({ UUID: "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.increment" })
+@action({ UUID: "com.beaunouvelle.summoning-stone.increment" })
 export class PlaySfx extends SingletonAction<PlaySfxSettings> {
 	private currentIconName?: string;
 
@@ -32,7 +32,10 @@ export class PlaySfx extends SingletonAction<PlaySfxSettings> {
 		await fetch(endpoint, { method: "POST" });
 	}
 
-	private async updateIcon(action: KeyAction<PlaySfxSettings>, sfxName?: string): Promise<void> {
+	private async updateIcon(
+		action: KeyAction<PlaySfxSettings> | DialAction<PlaySfxSettings>,
+		sfxName?: string
+	): Promise<void> {
 		if (!sfxName) {
 			if (this.currentIconName) {
 				await action.setImage(undefined);

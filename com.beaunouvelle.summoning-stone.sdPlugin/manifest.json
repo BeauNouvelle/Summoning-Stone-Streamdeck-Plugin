@@ -5,7 +5,7 @@
 	"Actions": [
 		{
 			"Name": "Play SFX",
-			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.increment",
+			"UUID": "com.beaunouvelle.summoning-stone.increment",
 			"Icon": "imgs/actions/sfx/icon",
 			"Tooltip": "Plays a selected SFX.",
 			"PropertyInspectorPath": "ui/play-sfx.html",
@@ -21,7 +21,7 @@
 		},
 		{
 			"Name": "Start Scene",
-			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.scene-selector",
+			"UUID": "com.beaunouvelle.summoning-stone.scene-selector",
 			"Icon": "imgs/actions/scene/icon",
 			"Tooltip": "Select a campaign scene for playback.",
 			"PropertyInspectorPath": "ui/scene-selector.html",
@@ -37,7 +37,7 @@
 		},
 		{
 			"Name": "Stop Scene",
-			"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.stop-scene",
+			"UUID": "com.beaunouvelle.summoning-stone.stop-scene",
 			"Icon": "imgs/actions/scene/stop",
 			"Tooltip": "Stop the current scene.",
 			"Controllers": [
@@ -70,5 +70,5 @@
 		"Version": "20",
 		"Debug": "enabled"
 	},
-	"UUID": "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience"
+	"UUID": "com.beaunouvelle.summoning-stone"
 }

@@ -6,7 +6,7 @@ import path from "node:path";
 import url from "node:url";
 
 const isWatching = !!process.env.ROLLUP_WATCH;
-const sdPlugin = "com.beau-nouvelle.summoning-stone---ttrpg-sfx-soundboard-music--ambience.sdPlugin";
+const sdPlugin = "com.beaunouvelle.summoning-stone.sdPlugin";
 
 /**
  * @type {import('rollup').RollupOptions}
